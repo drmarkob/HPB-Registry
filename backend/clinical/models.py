@@ -307,16 +307,6 @@ class SurgicalProcedure(models.Model):
     pringle_time_minutes = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
     pringle_cycles = models.IntegerField(null=True, blank=True, default=None, validators=[MinValueValidator(0)])
     
-    # POPF (Postoperative Pancreatic Fistula)
-    popf_present = models.BooleanField(default=False)
-    POPF_GRADES = [
-        ('A', 'Grade A (Biochemical leak)'),
-        ('B', 'Grade B (Requires intervention)'),
-        ('C', 'Grade C (Severe, reoperation/death)')
-    ]
-    popf_grade = models.CharField(max_length=1, choices=POPF_GRADES, blank=True, null=True)
-    popf_drain_amylase = models.FloatField(null=True, blank=True, help_text="U/L")
-    
     CLAVIEN_DINDO_CHOICES = [
         (0, 'No complication'),
         (1, 'Grade I - Any deviation from normal course'),
@@ -330,16 +320,6 @@ class SurgicalProcedure(models.Model):
 
     # Complications
     clavien_dindo_grade = models.IntegerField(choices=CLAVIEN_DINDO_CHOICES, blank=True, null=True)
-    
-    # Bile leak
-    bile_leak = models.BooleanField(default=False)
-    BILE_LEAK_GRADES = [
-        ('A', 'Grade A - Managed conservatively'),
-        ('B', 'Grade B - Requires intervention'),
-        ('C', 'Grade C - Reoperation required')
-    ]
-    bile_leak_grade = models.CharField(max_length=1, choices=BILE_LEAK_GRADES, blank=True, null=True)
-    bile_leak_treatment = models.TextField(blank=True)
     
     # Postoperative stay
     hospital_stay_days = models.IntegerField(null=True, blank=True)
@@ -445,6 +425,23 @@ class FollowUp(models.Model):
     
     # Comments
     clinical_notes = models.TextField(blank=True)
+
+    disease_free_survival_months = models.FloatField(
+        null=True, blank=True, 
+        help_text="Months until recurrence or death"
+    )
+    overall_survival_months = models.FloatField(
+        null=True, blank=True, 
+        help_text="Months from surgery to death or last follow-up"
+    )
+    recurrence_free_survival_months = models.FloatField(
+        null=True, blank=True, 
+        help_text="Months from surgery to recurrence"
+    )
+    last_known_alive_date = models.DateField(
+        null=True, blank=True, 
+        help_text="Date patient was last confirmed alive"
+    )
     
     class Meta:
         ordering = ['-followup_date']
@@ -520,3 +517,58 @@ class LiverTumor(models.Model):
     
     def __str__(self):
         return f"Tumor in {self.segment}: {self.size_cm} cm"
+
+class TextbookOutcome(models.Model):
+    """Textbook outcome quality metric for surgical procedures"""
+    surgical_procedure = models.OneToOneField(
+        'SurgicalProcedure', 
+        on_delete=models.CASCADE, 
+        related_name='textbook_outcome'
+    )
+    
+    # Textbook outcome components
+    no_major_complications = models.BooleanField(
+        default=False, 
+        help_text="No Clavien-Dindo ≥ III complications"
+    )
+    no_prolonged_los = models.BooleanField(
+        default=False, 
+        help_text="Length of stay ≤ 75th percentile for procedure"
+    )
+    no_readmission = models.BooleanField(
+        default=False, 
+        help_text="No 30-day readmission"
+    )
+    no_mortality = models.BooleanField(
+        default=False, 
+        help_text="No 30-day mortality"
+    )
+    negative_margins = models.BooleanField(
+        default=False, 
+        help_text="R0 resection"
+    )
+    adequate_lymph_node_yield = models.BooleanField(
+        default=False, 
+        help_text="≥12 lymph nodes examined"
+    )
+    
+    calculated_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Textbook Outcome"
+        verbose_name_plural = "Textbook Outcomes"
+    
+    @property
+    def achieved(self):
+        """Check if textbook outcome was achieved"""
+        return all([
+            self.no_major_complications,
+            self.no_prolonged_los,
+            self.no_readmission,
+            self.no_mortality,
+            self.negative_margins,
+            self.adequate_lymph_node_yield
+        ])
+    
+    def __str__(self):
+        return f"Textbook Outcome: {'Achieved' if self.achieved else 'Not Achieved'}"

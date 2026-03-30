@@ -6,7 +6,8 @@ from .models import (
     LiverResectionDetail, 
     PancreaticResectionDetail, 
     BiliaryProcedureDetail,
-    LiverTumor  # Add this import
+    LiverTumor,
+    TextbookOutcome,  # Add this line
 )
 
 # Add this inline class before LiverResectionDetailAdmin
@@ -78,10 +79,6 @@ class SurgicalProcedureAdmin(admin.ModelAdmin):
             'fields': ('pringle_maneuver', 'pringle_time_minutes', 'pringle_cycles'),
             'classes': ('collapse',)
         }),
-        ('Postoperative Outcomes', {
-            'fields': ('popf_present', 'popf_grade', 'popf_drain_amylase', 'bile_leak', 'bile_leak_grade'),
-            'classes': ('collapse',)
-        }),
         ('Hospital Course', {
             'fields': ('hospital_stay_days', 'icu_stay_days', 'readmission_30d', 'readmission_reason'),
             'classes': ('collapse',)
@@ -117,3 +114,32 @@ class FollowUpAdmin(admin.ModelAdmin):
     list_display = ['patient', 'followup_date', 'alive', 'recurrence']
     list_filter = ['followup_date', 'alive', 'recurrence']
     search_fields = ['patient__patient_id', 'patient__last_name']
+
+@admin.register(TextbookOutcome)
+class TextbookOutcomeAdmin(admin.ModelAdmin):
+    list_display = ['surgical_procedure', 'achieved', 'no_major_complications', 'no_prolonged_los', 
+                   'no_readmission', 'no_mortality', 'negative_margins']
+    list_filter = ['no_major_complications', 'no_prolonged_los', 'no_readmission', 'no_mortality', 
+                  'negative_margins', 'adequate_lymph_node_yield']  # Removed 'achieved' from list_filter
+    search_fields = ['surgical_procedure__patient__patient_id', 'surgical_procedure__patient__first_name']
+    readonly_fields = ['calculated_at']
+    
+    fieldsets = (
+        ('Surgical Procedure', {
+            'fields': ('surgical_procedure',)
+        }),
+        ('Textbook Outcome Components', {
+            'fields': ('no_major_complications', 'no_prolonged_los', 'no_readmission', 
+                      'no_mortality', 'negative_margins', 'adequate_lymph_node_yield')
+        }),
+        ('System Fields', {
+            'fields': ('calculated_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def achieved(self, obj):
+        """Display if textbook outcome was achieved"""
+        return '✓' if obj.achieved else '✗'
+    achieved.short_description = 'Achieved'
+    achieved.boolean = True
