@@ -1,0 +1,21 @@
+{% extends "admin/app_index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>Clinical Data Management</h2>
+        <p>Follow this order for data entry:</p>
+        <ol>
+            <li><strong>Surgical Procedures</strong> - First, record the main surgical procedure</li>
+            <li><strong>Liver Resection Details</strong> - If liver surgery, add detailed liver data</li>
+            <li><strong>Pancreatic Resection Details</strong> - If pancreatic surgery, add detailed pancreatic data</li>
+            <li><strong>Biliary Procedure Details</strong> - If biliary surgery, add detailed biliary data</li>
+            <li><strong>Chemotherapy</strong> - Record chemotherapy protocols</li>
+            <li><strong>Follow-up</strong> - Track patient outcomes</li>
+        </ol>
+    </div>
+    
+    {{ block.super }}
+</div>
+{% endblock %}

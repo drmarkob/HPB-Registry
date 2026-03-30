@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>HPB Surgery Registry Dashboard</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Total Patients</div>
+                <div class="card-body">
+                    <h3 class="card-title">{{ total_patients }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Total Surgeries</div>
+                <div class="card-body">
+                    <h3 class="card-title">{{ total_surgeries }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">Pathology Reports</div>
+                <div class="card-body">
+                    <h3 class="card-title">{{ total_pathology }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h3>Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'admin:patients_patient_add' %}" class="btn btn-primary">Add Patient</a>
+                    <a href="{% url 'admin:clinical_surgicalprocedure_add' %}" class="btn btn-success">Add Surgery</a>
+                    <a href="{% url 'export_complete' %}" class="btn btn-warning">Export Data</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

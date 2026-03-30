@@ -1,0 +1,157 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>📊 Data Export Center</h1>
+    <p class="lead">Export your HPB surgery registry data for statistical analysis</p>
+    
+    <div class="alert alert-info">
+        <strong>📁 Export Format:</strong> Excel (.xlsx) - Compatible with SPSS, R, Python, and all statistical software
+    </div>
+    
+    <div class="row mt-4">
+        <!-- Complete Export Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">📋 Complete Dataset Export</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Contains all data:</strong></p>
+                    <ul>
+                        <li>👤 Patient demographics and main diagnosis</li>
+                        <li>🏥 Surgical procedures with details</li>
+                        <li>🔬 Pathology reports with ICD-10 codes</li>
+                        <li>🧪 Laboratory panels and tumor markers</li>
+                        <li>📊 Scoring systems (MELD, ASA, Child-Pugh, Charlson)</li>
+                        <li>💊 Chemotherapy protocols</li>
+                        <li>📈 Follow-up and survival data</li>
+                    </ul>
+                    <p><strong>Format:</strong> Multi-sheet Excel file</p>
+                    <p><strong>File size estimate:</strong> ~1-5 MB per 100 patients</p>
+                    <a href="{% url 'export_complete' %}" class="btn btn-primary btn-lg w-100 mt-3" onclick="return confirm('This may take a few moments. Continue?');">
+                        <i class="fas fa-download"></i> Export Complete Dataset
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Export Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">📊 Summary Statistics Export</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Quick overview:</strong></p>
+                    <ul>
+                        <li>Total patient counts</li>
+                        <li>Surgery type breakdowns</li>
+                        <li>Pathology report statistics</li>
+                        <li>Laboratory test counts</li>
+                        <li>Follow-up data summary</li>
+                    </ul>
+                    <p><strong>Format:</strong> Single-sheet Excel file</p>
+                    <p><strong>Best for:</strong> Quick overview and progress reports</p>
+                    <a href="{% url 'export_summary' %}" class="btn btn-success btn-lg w-100 mt-3">
+                        <i class="fas fa-chart-bar"></i> Export Summary Statistics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Database Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="mb-0">📈 Database Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="display-4 text-primary">{{ patient_count }}</div>
+                            <p class="text-muted">Total Patients</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="display-4 text-success">{{ surgery_count }}</div>
+                            <p class="text-muted">Surgeries</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="display-4 text-info">{{ pathology_count }}</div>
+                            <p class="text-muted">Pathology Reports</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="display-4 text-warning">{{ lab_count }}</div>
+                            <p class="text-muted">Laboratory Tests</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SPSS Import Instructions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="mb-0">📖 How to Import into SPSS</h3>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Click "Export Complete Dataset" above</li>
+                        <li>Save the Excel file to your computer</li>
+                        <li>Open SPSS</li>
+                        <li>Go to <strong>File → Open → Data</strong></li>
+                        <li>Change file type to "Excel (*.xlsx)"</li>
+                        <li>Select your downloaded file</li>
+                        <li>Choose the sheet you want to analyze (e.g., "Patients")</li>
+                        <li>Click OK - SPSS will automatically detect variable types</li>
+                    </ol>
+                    <div class="alert alert-warning mt-3">
+                        <strong>💡 Tip:</strong> For survival analysis, use the "Follow_Up" sheet with survival_months and alive variables.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if last_export %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">⏱️ Last Export</h3>
+                </div>
+                <div class="card-body">
+                    <p>Last export performed on: <strong>{{ last_export }}</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .card {
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .display-4 {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .btn-lg {
+        padding: 12px;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,58 @@
+from django.contrib import admin
+from django.contrib.auth.models import Group, User
+
+# Set admin headers
+admin.site.site_header = "HPB Surgery Registry"
+admin.site.site_title = "HPB Registry Admin"
+admin.site.index_title = "Welcome to HPB Surgery Registry"
+
+# Custom app ordering function
+original_get_app_list = admin.site.get_app_list
+
+def get_app_list(self, request):
+    app_dict = self._build_app_dict(request)
+    
+    # Define the exact order
+    app_order = [
+        'patients',
+        'laboratory',
+        'clinical',
+        'pathology',
+        'scoring',
+        'medical_codes',
+        'export',
+        'auth',
+    ]
+    
+    # Build ordered app list
+    ordered_app_list = []
+    for app_label in app_order:
+        if app_label in app_dict:
+            app = app_dict[app_label]
+            
+            # Add icons to names
+            icon_map = {
+                'patients': '👤 Patients',
+                'laboratory': '🧪 Laboratory',
+                'clinical': '🏥 Clinical',
+                'pathology': '🔬 Pathology',
+                'scoring': '📊 Scoring',
+                'medical_codes': '📋 Medical Codes',
+                'export': '📤 Export',
+                'auth': '🔐 Authentication and Authorization',
+            }
+            
+            if app_label in icon_map:
+                app['name'] = icon_map[app_label]
+            
+            ordered_app_list.append(app)
+    
+    # Add any remaining apps
+    for app_label, app in app_dict.items():
+        if app_label not in app_order:
+            ordered_app_list.append(app)
+    
+    return ordered_app_list
+
+# Apply the ordering
+admin.site.get_app_list = get_app_list.__get__(admin.site)
