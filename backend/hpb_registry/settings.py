@@ -54,7 +54,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'hpb_registry.middleware.audit.AuditMiddleware', 
+    'hpb_registry.middleware.audit.AuditMiddleware',
+    'hpb_registry.middleware.audit.AuditLoggingMiddleware',  # Add this line 
 ]
 
 ROOT_URLCONF = 'hpb_registry.urls'

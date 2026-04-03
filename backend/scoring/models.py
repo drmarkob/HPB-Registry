@@ -286,3 +286,235 @@ class CharlsonComorbidity(models.Model):
     
     def __str__(self):
         return f"Charlson: {self.score} - {self.patient}"
+
+class FibrosisScore(models.Model):
+    """
+    Non-invasive liver fibrosis scores (FIB-4 and APRI)
+    Reference: Sterling RK, et al. Development of a simple noninvasive index to predict significant fibrosis
+    """
+    patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='fibrosis_scores')
+    date_assessed = models.DateField(auto_now_add=True)
+    laboratory = models.ForeignKey('laboratory.LaboratoryPanel', on_delete=models.CASCADE, null=True, blank=True)
+    
+    # FIB-4 Index
+    # Formula: (Age × AST) / (Platelets × √ALT)
+    fib4_score = models.FloatField(null=True, blank=True, help_text="FIB-4 score")
+    
+    # APRI Score (AST to Platelet Ratio Index)
+    # Formula: (AST/ULN) / Platelets × 100
+    apri_score = models.FloatField(null=True, blank=True, help_text="APRI score")
+    
+    # Interpretations
+    FIB4_CATEGORIES = [
+        ('low', 'Low risk of advanced fibrosis (<1.45)'),
+        ('intermediate', 'Intermediate risk (1.45-3.25)'),
+        ('high', 'High risk of advanced fibrosis (>3.25)'),
+    ]
+    fib4_category = models.CharField(max_length=20, choices=FIB4_CATEGORIES, null=True, blank=True)
+    
+    APRI_CATEGORIES = [
+        ('low', 'Low risk of cirrhosis (<0.5)'),
+        ('intermediate', 'Intermediate risk (0.5-1.5)'),
+        ('high', 'High risk of cirrhosis (>1.5)'),
+    ]
+    apri_category = models.CharField(max_length=20, choices=APRI_CATEGORIES, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_assessed']
+        verbose_name_plural = "Fibrosis Scores"
+    
+    def calculate_fib4(self, age, ast, alt, platelets):
+        """Calculate FIB-4 score"""
+        if all([age, ast, platelets, alt]) and platelets > 0 and alt > 0:
+            try:
+                fib4 = (age * ast) / (platelets * (alt ** 0.5))
+                return round(fib4, 2)
+            except (ValueError, ZeroDivisionError):
+                pass
+        return None
+    
+    def calculate_apri(self, ast, platelets, ast_uln=40):
+        """Calculate APRI score (AST ULN = 40 U/L)"""
+        if all([ast, platelets]) and platelets > 0:
+            try:
+                ast_ratio = ast / ast_uln
+                apri = (ast_ratio / platelets) * 100
+                return round(apri, 2)
+            except (ValueError, ZeroDivisionError):
+                pass
+        return None
+    
+    def get_fib4_category(self, fib4):
+        if fib4:
+            if fib4 < 1.45:
+                return 'low'
+            elif fib4 <= 3.25:
+                return 'intermediate'
+            else:
+                return 'high'
+        return None
+    
+    def get_apri_category(self, apri):
+        if apri:
+            if apri < 0.5:
+                return 'low'
+            elif apri <= 1.5:
+                return 'intermediate'
+            else:
+                return 'high'
+        return None
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate if lab data is available
+        if self.laboratory:
+            # Get patient age
+            age = self.patient.age if self.patient.age else 0
+            
+            # Calculate FIB-4
+            self.fib4_score = self.calculate_fib4(
+                age,
+                self.laboratory.ast,
+                self.laboratory.alt,
+                self.laboratory.platelets
+            )
+            self.fib4_category = self.get_fib4_category(self.fib4_score)
+            
+            # Calculate APRI
+            self.apri_score = self.calculate_apri(
+                self.laboratory.ast,
+                self.laboratory.platelets
+            )
+            self.apri_category = self.get_apri_category(self.apri_score)
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"FIB-4: {self.fib4_score}, APRI: {self.apri_score} - {self.patient}"
+
+
+class NutritionalRiskIndex(models.Model):
+    """
+    Nutritional Risk Index for surgical outcomes
+    Reference: The Veterans Affairs Total Parenteral Nutrition Cooperative Study Group
+    """
+    patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='nri_scores')
+    date_assessed = models.DateField(auto_now_add=True)
+    
+    # NRI = (1.519 × albumin g/L) + (41.7 × weight loss ratio)
+    albumin_g_l = models.FloatField(help_text="Serum albumin (g/L)")
+    usual_weight_kg = models.FloatField(help_text="Usual weight before illness (kg)")
+    current_weight_kg = models.FloatField(help_text="Current weight (kg)")
+    
+    nri_score = models.FloatField(null=True, blank=True)
+    
+    NRI_CATEGORIES = [
+        ('severe', 'Severe malnutrition (<83.5)'),
+        ('moderate', 'Moderate malnutrition (83.5-97.5)'),
+        ('mild', 'Mild malnutrition (97.5-100)'),
+        ('normal', 'Normal nutrition (>100)'),
+    ]
+    category = models.CharField(max_length=20, choices=NRI_CATEGORIES, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_assessed']
+        verbose_name_plural = "Nutritional Risk Indices"
+    
+    def calculate_nri(self):
+        if self.albumin_g_l and self.usual_weight_kg and self.current_weight_kg:
+            weight_ratio = self.current_weight_kg / self.usual_weight_kg if self.usual_weight_kg > 0 else 1
+            nri = (1.519 * self.albumin_g_l) + (41.7 * weight_ratio)
+            return round(nri, 1)
+        return None
+    
+    def get_category(self, nri):
+        if nri:
+            if nri < 83.5:
+                return 'severe'
+            elif nri < 97.5:
+                return 'moderate'
+            elif nri < 100:
+                return 'mild'
+            else:
+                return 'normal'
+        return None
+    
+    def save(self, *args, **kwargs):
+        self.nri_score = self.calculate_nri()
+        self.category = self.get_category(self.nri_score)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"NRI: {self.nri_score} - {self.patient}"
+
+class SarcopeniaAssessment(models.Model):
+    """
+    Sarcopenia assessment using CT-based muscle measurements
+    Reference: Prado CM, et al. Sarcopenia as a determinant of chemotherapy toxicity
+    """
+    patient = models.ForeignKey('patients.Patient', on_delete=models.CASCADE, related_name='sarcopenia_assessments')
+    date_assessed = models.DateField(auto_now_add=True)
+    
+    # CT measurements at L3 vertebra level
+    skeletal_muscle_index_cm2_m2 = models.FloatField(
+        null=True, blank=True,
+        help_text="Skeletal muscle index at L3 (cm²/m²) - Sarcopenia cutoff: M<55, F<39"
+    )
+    psoas_muscle_area_cm2 = models.FloatField(
+        null=True, blank=True,
+        help_text="Psoas muscle area at L3 (cm²)"
+    )
+    visceral_fat_area_cm2 = models.FloatField(
+        null=True, blank=True,
+        help_text="Visceral fat area at L3 (cm²)"
+    )
+    subcutaneous_fat_area_cm2 = models.FloatField(
+        null=True, blank=True,
+        help_text="Subcutaneous fat area at L3 (cm²)"
+    )
+    
+    # Patient gender (for cutoff determination)
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+    ]
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, help_text="Patient gender for cutoff determination")
+    
+    is_sarcopenic = models.BooleanField(
+        default=False,
+        help_text="Based on SMI cutoffs: Male <55 cm²/m², Female <39 cm²/m²"
+    )
+    
+    ct_slice_location = models.CharField(
+        max_length=50, blank=True,
+        help_text="CT slice location (e.g., L3 vertebra)"
+    )
+    ct_date = models.DateField(null=True, blank=True)
+    
+    notes = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-ct_date']
+        verbose_name_plural = "Sarcopenia Assessments"
+    
+    def check_sarcopenia(self):
+        """Check sarcopenia based on SMI cutoffs (Prado 2008)"""
+        if self.skeletal_muscle_index_cm2_m2:
+            if self.gender == 'M' and self.skeletal_muscle_index_cm2_m2 < 55:
+                return True
+            elif self.gender == 'F' and self.skeletal_muscle_index_cm2_m2 < 39:
+                return True
+        return False
+    
+    def save(self, *args, **kwargs):
+        self.is_sarcopenic = self.check_sarcopenia()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Sarcopenia: {'Yes' if self.is_sarcopenic else 'No'} - {self.patient}"

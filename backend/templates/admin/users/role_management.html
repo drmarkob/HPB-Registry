@@ -1,0 +1,109 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>User Role Management</h1>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h3>Role Definitions</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Description</th>
+                        <th>View</th>
+                        <th>Add</th>
+                        <th>Change</th>
+                        <th>Delete</th>
+                        <th>Export</th>
+                        <th>Manage Users</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Admin</strong></td>
+                        <td>Full system access</td>
+                        <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Surgeon</strong></td>
+                        <td>Full patient data access</td>
+                        <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Resident</strong></td>
+                        <td>Edit access, limited admin</td>
+                        <td>✓</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Researcher</strong></td>
+                        <td>Read-only for research</td>
+                        <td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Entry</strong></td>
+                        <td>Create/edit records</td>
+                        <td>✓</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Viewer</strong></td>
+                        <td>Read-only access</td>
+                        <td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h3>Research Anonymization Levels</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Description</th>
+                        <th>Patient Name</th>
+                        <th>Patient ID</th>
+                        <th>DOB</th>
+                        <th>Contact Info</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>None</strong></td>
+                        <td>Full access</td>
+                        <td>Visible</td><td>Visible</td><td>Visible</td><td>Visible</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Partial</strong></td>
+                        <td>Names hidden, dates shifted</td>
+                        <td>REDACTED</td><td>RES-XXXXX</td><td>±7 days</td><td>Hidden</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Full</strong></td>
+                        <td>Complete de-identification</td>
+                        <td>ANONYMOUS</td><td>ANON-XXXXX</td><td>Hidden</td><td>Hidden</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-success text-white">
+            <h3>Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <a href="{% url 'admin:users_userprofile_changelist' %}" class="btn btn-primary">Manage User Profiles</a>
+            <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-secondary">Manage Users</a>
+            <a href="{% url 'admin:users_auditlog_changelist' %}" class="btn btn-info">View Audit Logs</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
 from django.contrib.admin import AdminSite
+from django.contrib.auth.models import User, Group
 from django.utils.translation import gettext_lazy as _
 
 # Import all models and admins
@@ -6,9 +7,10 @@ from patients.models import Patient
 from patients.admin import PatientAdmin
 
 from clinical.models import (SurgicalProcedure, FollowUp, ChemotherapyProtocol, 
-                            TextbookOutcome)
+                            TextbookOutcome, SarcopeniaAssessment)
 from clinical.admin import (SurgicalProcedureAdmin, FollowUpAdmin, 
-                           ChemotherapyProtocolAdmin, TextbookOutcomeAdmin)
+                           ChemotherapyProtocolAdmin, TextbookOutcomeAdmin,
+                           SarcopeniaAssessmentAdmin)
 
 from pathology.models import PathologyReport
 from pathology.admin import PathologyReportAdmin
@@ -17,22 +19,22 @@ from laboratory.models import LaboratoryPanel, TumorMarkerPanel, MicrobiologyCul
 from laboratory.admin import LaboratoryPanelAdmin, TumorMarkerPanelAdmin, MicrobiologyCultureAdmin
 
 from complications.models import (GeneralComplication, PancreaticComplication, 
-                                  LiverComplication)
+                                  LiverComplication, POPFDetail, PostHepatectomyLiverFailure)
 from complications.admin import (GeneralComplicationAdmin, PancreaticComplicationAdmin, 
-                                 LiverComplicationAdmin)
+                                 LiverComplicationAdmin, POPFDetailAdmin, 
+                                 PostHepatectomyLiverFailureAdmin)
 
 from medical_codes.models import Diagnosis, HistologyType
 from medical_codes.admin import DiagnosisAdmin, HistologyTypeAdmin
 
 from scoring.models import (MELDScore, ASAScore, ChildPughScore, CharlsonComorbidity,
-                           FibrosisScore, NutritionalRiskIndex, SarcopeniaAssessment)
+                           FibrosisScore, NutritionalRiskIndex)
 from scoring.admin import (MELDScoreAdmin, ASAScoreAdmin, ChildPughScoreAdmin, 
                           CharlsonComorbidityAdmin, FibrosisScoreAdmin, 
-                          NutritionalRiskIndexAdmin, SarcopeniaAssessmentAdmin)
+                          NutritionalRiskIndexAdmin)
 
-from users.models import UserProfile, AuditLog, User, Group
-from users.admin import (UserProfileAdmin, AuditLogAdmin, UserAdminProxy, 
-                         GroupAdminProxy, CustomUserAdmin)
+from users.models import UserProfile
+from users.admin import UserProfileAdmin
 
 
 class HPBAdminSite(AdminSite):
@@ -50,68 +52,20 @@ class HPBAdminSite(AdminSite):
         
         # Define the desired order for apps
         app_order = [
-            'patients',      # 1. Patient records
-            'clinical',      # 2. Surgical procedures & follow-up
-            'pathology',     # 3. Pathology reports
-            'laboratory',    # 4. Lab results
-            'complications', # 5. Complications
-            'scoring',       # 6. Risk scores
-            'medical_codes', # 7. Reference data
-            'users',         # 8. Users, Groups, Profiles, Audit (all in one)
+            'patients',
+            'clinical',
+            'pathology',
+            'laboratory',
+            'complications',
+            'scoring',
+            'medical_codes',
+            'users',
+            'auth',
         ]
         
         if not app_label:
             app_list.sort(key=lambda x: app_order.index(x['app_label']) 
                           if x['app_label'] in app_order else 999)
-        
-        # Define model order within each app
-        model_orders = {
-            'patients': ['Patient'],
-            'clinical': [
-                'Surgical procedure',
-                'Follow up',
-                'Chemotherapy protocol',
-                'Textbook outcome'
-            ],
-            'pathology': ['Pathology report'],
-            'laboratory': [
-                'Laboratory panel',
-                'Tumor marker panel',
-                'Microbiology culture'
-            ],
-            'complications': [
-                'General complication',
-                'Pancreatic complication',
-                'Liver complication'
-            ],
-            'scoring': [
-                'Meld score',
-                'Asa score',
-                'Child pugh score',
-                'Charlson comorbidity',
-                'Fibrosis score',
-                'Nutritional risk index',
-                'Sarcopenia assessment'
-            ],
-            'medical_codes': [
-                'Diagnosis',
-                'Histology type'
-            ],
-            'users': [
-                'Users',           # Proxy User model
-                'Groups',          # Proxy Group model
-                'User profiles',   # Custom UserProfile
-                'Audit logs'       # Audit log entries
-            ],
-        }
-        
-        # Sort models within each app
-        for app in app_list:
-            app_label_name = app['app_label']
-            if app_label_name in model_orders:
-                order = model_orders[app_label_name]
-                app['models'].sort(key=lambda x: order.index(x['name']) 
-                                   if x['name'] in order else 999)
         
         return app_list
 
@@ -125,6 +79,7 @@ admin_site.register(SurgicalProcedure, SurgicalProcedureAdmin)
 admin_site.register(FollowUp, FollowUpAdmin)
 admin_site.register(ChemotherapyProtocol, ChemotherapyProtocolAdmin)
 admin_site.register(TextbookOutcome, TextbookOutcomeAdmin)
+admin_site.register(SarcopeniaAssessment, SarcopeniaAssessmentAdmin)
 admin_site.register(PathologyReport, PathologyReportAdmin)
 admin_site.register(LaboratoryPanel, LaboratoryPanelAdmin)
 admin_site.register(TumorMarkerPanel, TumorMarkerPanelAdmin)
@@ -132,6 +87,8 @@ admin_site.register(MicrobiologyCulture, MicrobiologyCultureAdmin)
 admin_site.register(GeneralComplication, GeneralComplicationAdmin)
 admin_site.register(PancreaticComplication, PancreaticComplicationAdmin)
 admin_site.register(LiverComplication, LiverComplicationAdmin)
+admin_site.register(POPFDetail, POPFDetailAdmin)
+admin_site.register(PostHepatectomyLiverFailure, PostHepatectomyLiverFailureAdmin)
 admin_site.register(Diagnosis, DiagnosisAdmin)
 admin_site.register(HistologyType, HistologyTypeAdmin)
 admin_site.register(MELDScore, MELDScoreAdmin)
@@ -140,8 +97,6 @@ admin_site.register(ChildPughScore, ChildPughScoreAdmin)
 admin_site.register(CharlsonComorbidity, CharlsonComorbidityAdmin)
 admin_site.register(FibrosisScore, FibrosisScoreAdmin)
 admin_site.register(NutritionalRiskIndex, NutritionalRiskIndexAdmin)
-admin_site.register(SarcopeniaAssessment, SarcopeniaAssessmentAdmin)
 admin_site.register(UserProfile, UserProfileAdmin)
-admin_site.register(AuditLog, AuditLogAdmin)
-admin_site.register(User, UserAdminProxy)
-admin_site.register(Group, GroupAdminProxy)
+admin_site.register(User)
+admin_site.register(Group)

@@ -176,3 +176,92 @@ class LiverComplication(models.Model):
     
     def __str__(self):
         return f"{self.get_complication_type_display()} - POD {self.onset_days} (Grade {self.clavien_grade})"
+
+class POPFDetail(models.Model):
+    """ISGPS-defined Postoperative Pancreatic Fistula"""
+    # Link to PancreaticComplication instead of SurgicalProcedure
+    pancreatic_complication = models.OneToOneField(
+        'PancreaticComplication', 
+        on_delete=models.CASCADE,
+        null=True, 
+        blank=True, 
+        related_name='popf_detail'
+    )
+    
+    # Keep surgical_procedure for backward compatibility (optional)
+    surgical_procedure = models.ForeignKey(
+        'clinical.SurgicalProcedure', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='popf_details_backup'
+    )
+    
+    grade = models.CharField(max_length=20, choices=[
+        ('biochemical', 'Biochemical Leak'),
+        ('grade_b', 'Grade B - Clinically relevant'),
+        ('grade_c', 'Grade C - Severe')
+    ])
+    
+    drain_amylase_pod3 = models.FloatField(null=True, blank=True)
+    drain_amylase_ratio = models.FloatField(null=True, blank=True)
+    drain_retained = models.BooleanField(default=False)
+    antibiotics_required = models.BooleanField(default=False)
+    interventional_radiology = models.BooleanField(default=False)
+    tpn_required = models.BooleanField(default=False)
+    reoperation_required = models.BooleanField(default=False)
+    icu_admission = models.BooleanField(default=False)
+    death_attributed = models.BooleanField(default=False)
+    resolved_days = models.IntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"POPF {self.grade}"
+
+
+class PostHepatectomyLiverFailure(models.Model):
+    """ISGLS-defined Post-hepatectomy Liver Failure"""
+    # Link to LiverComplication instead of SurgicalProcedure
+    liver_complication = models.OneToOneField(
+        'LiverComplication', 
+        on_delete=models.CASCADE,
+        null=True, 
+        blank=True, 
+        related_name='phlf_detail'
+    )
+    
+    # Keep surgical_procedure for backward compatibility (optional)
+    surgical_procedure = models.ForeignKey(
+        'clinical.SurgicalProcedure', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='phlf_details_backup'
+    )
+    
+    grade = models.CharField(max_length=20, choices=[
+        ('grade_a', 'Grade A - Abnormal labs'),
+        ('grade_b', 'Grade B - Non-invasive treatment'),
+        ('grade_c', 'Grade C - Invasive treatment')
+    ])
+    
+    bilirubin_pod5 = models.FloatField(null=True, blank=True)
+    inr_pod5 = models.FloatField(null=True, blank=True)
+    ascites_requiring_diuretics = models.BooleanField(default=False)
+    encephalopathy_present = models.BooleanField(default=False)
+    coagulopathy_requiring_ffp = models.BooleanField(default=False)
+    renal_failure = models.BooleanField(default=False)
+    respiratory_failure = models.BooleanField(default=False)
+    reoperation_required = models.BooleanField(default=False)
+    liver_transplant_required = models.BooleanField(default=False)
+    resolved = models.BooleanField(default=False)
+    resolved_days = models.IntegerField(null=True, blank=True)
+    death_attributed = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"PHLF {self.grade}"

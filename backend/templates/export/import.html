@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>📤 Import Patients</h1>
+    <p class="lead">Upload an Excel or CSV file to import patients in bulk.</p>
+    
+    <div class="alert alert-info">
+        <strong>📁 Template:</strong> You can generate a template with sample data by running:
+        <pre><code>python manage.py generate_import_template</code></pre>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h3>Upload File</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="excel_file" class="form-label">Choose file:</label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                           accept=".xlsx,.xls,.csv" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Import</button>
+                <a href="{% url 'export_dashboard' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-secondary text-white">
+            <h3>Required Columns</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr><th>Column</th><th>Description</th><th>Required</th> </tr>
+                </thead>
+                <tbody>
+                    <tr><td>patient_id</td><td>Unique identifier</td><td>Yes</td></tr>
+                    <tr><td>first_name</td><td>First name</td><td>Yes</td></tr>
+                    <tr><td>last_name</td><td>Last name</td><td>Yes</td></tr>
+                    <tr><td>date_of_birth</td><td>YYYY-MM-DD</td><td>No</td></tr>
+                    <tr><td>gender</td><td>M/F/O</td><td>Yes</td></tr>
+                    <tr><td>email</td><td>Email address</td><td>No</td></tr>
+                    <tr><td>phone</td><td>Phone number</td><td>No</td></tr>
+                    <tr><td>smoking_status</td><td>never/former/current</td><td>No</td></tr>
+                    <tr><td>diabetes</td><td>True/False</td><td>No</td></tr>
+                    <tr><td>hypertension</td><td>True/False</td><td>No</td></tr>
+                    <tr><td>diagnosis_icd10</td><td>ICD-10 code</td><td>No</td></tr>
+                    <tr><td>height_cm</td><td>Height in cm</td><td>No</td></tr>
+                    <tr><td>weight_kg</td><td>Weight in kg</td><td>No</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

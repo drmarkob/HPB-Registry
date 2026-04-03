@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User  # ← Add this line
 from patients.models import Patient
+from hpb_registry.mixins import AuditMixin
 
 class LiverResectionDetail(models.Model):
     """Detailed liver resection data"""
@@ -226,9 +228,173 @@ class BiliaryProcedureDetail(models.Model):
     def __str__(self):
         return f"Biliary procedure: {self.get_biliary_procedure_display()} - {self.surgical_procedure.patient}"
 
-class SurgicalProcedure(models.Model):
+class SurgicalProcedure(AuditMixin, models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='surgeries')
     procedure_date = models.DateField()
+    
+    # ========================================================================
+    # SURGICAL TEAM
+    # ========================================================================
+    
+    # Primary Surgeon
+    primary_surgeon = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='primary_surgeon_procedures',
+        help_text="Main operating surgeon"
+    )
+    
+    # Assistant Surgeons
+    assistant_surgeon_1 = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='assistant1_procedures',
+        help_text="First assistant surgeon"
+    )
+    
+    assistant_surgeon_2 = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='assistant2_procedures',
+        help_text="Second assistant surgeon"
+    )
+    
+    # Supervising Surgeon (for residents/fellows)
+    supervising_surgeon = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='supervised_procedures',
+        help_text="Attending surgeon supervising the case"
+    )
+    
+    # Anesthesiologist
+    anesthesiologist = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='anesthesia_procedures',
+        help_text="Primary anesthesiologist"
+    )
+    
+    # ========================================================================
+    # SURGERY INDICATION AND URGENCY
+    # ========================================================================
+    
+    SURGERY_URGENCY = [
+        ('elective', 'Elective - Scheduled in advance'),
+        ('urgent', 'Urgent - Within 24-48 hours'),
+        ('emergency', 'Emergency - Immediate (<24 hours)'),
+    ]
+    urgency = models.CharField(max_length=20, choices=SURGERY_URGENCY, default='elective')
+    
+    SURGERY_INDICATION = [
+        ('malignancy', 'Malignancy (confirmed)'),
+        ('suspected_malignancy', 'Suspected Malignancy'),
+        ('benign', 'Benign Disease'),
+        ('trauma', 'Trauma'),
+        ('infection', 'Infection/Abscess'),
+        ('other', 'Other'),
+    ]
+    indication = models.CharField(max_length=30, choices=SURGERY_INDICATION, default='malignancy')
+    indication_other = models.CharField(max_length=200, blank=True, help_text="If other indication")
+    
+    # ========================================================================
+    # NEoadjuvant THERAPY
+    # ========================================================================
+    
+    neoadjuvant_chemotherapy = models.BooleanField(default=False)
+    neoadjuvant_radiotherapy = models.BooleanField(default=False)
+    neoadjuvant_chemoradiation = models.BooleanField(default=False)
+    neoadjuvant_protocol = models.CharField(max_length=200, blank=True, help_text="e.g., FOLFIRINOX, GEMCITABINE")
+    
+    days_from_neoadjuvant_to_surgery = models.IntegerField(
+        null=True, blank=True,
+        help_text="Days between last neoadjuvant treatment and surgery"
+    )
+    
+    # ========================================================================
+    # INTRAOPERATIVE DETAILS - ENHANCED
+    # ========================================================================
+    
+    # Existing fields
+    operative_time_minutes = models.IntegerField(validators=[MinValueValidator(0)])
+    blood_loss_ml = models.IntegerField(validators=[MinValueValidator(0)])
+    intraoperative_transfusion = models.BooleanField(default=False)
+    transfusion_units = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    
+    # New intraoperative fields
+    intraoperative_complications = models.TextField(
+        blank=True,
+        help_text="Describe any intraoperative complications (e.g., bleeding, hypotension, arrhythmia)"
+    )
+    
+    conversion_to_open = models.BooleanField(
+        default=False,
+        help_text="If laparoscopic/robotic, was conversion to open required?"
+    )
+    conversion_reason = models.CharField(max_length=200, blank=True)
+    
+    # Pringle maneuver (existing)
+    pringle_maneuver = models.BooleanField(default=False)
+    pringle_time_minutes = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    pringle_cycles = models.IntegerField(null=True, blank=True, default=None, validators=[MinValueValidator(0)])
+    
+    # ========================================================================
+    # POSTOPERATIVE OUTCOMES (ENHANCED)
+    # ========================================================================
+    
+    CLAVIEN_DINDO_CHOICES = [
+        (0, 'No complication'),
+        (1, 'Grade I - Any deviation from normal course'),
+        (2, 'Grade II - Pharmacologic treatment'),
+        (3, 'Grade IIIa - Intervention without general anesthesia'),
+        (4, 'Grade IIIb - Intervention with general anesthesia'),
+        (5, 'Grade IVa - Single organ dysfunction'),
+        (6, 'Grade IVb - Multiorgan dysfunction'),
+        (7, 'Grade V - Death'),
+    ]
+    clavien_dindo_grade = models.IntegerField(choices=CLAVIEN_DINDO_CHOICES, blank=True, null=True)
+    
+    # Postoperative stay
+    hospital_stay_days = models.IntegerField(null=True, blank=True)
+    icu_stay_days = models.IntegerField(null=True, blank=True)
+    
+    # Enhanced recovery protocol
+    enhanced_recovery_protocol = models.BooleanField(
+        default=False,
+        help_text="Was enhanced recovery protocol (ERP/ERAS) used?"
+    )
+    
+    # Readmission
+    readmission_30d = models.BooleanField(default=False)
+    readmission_90d = models.BooleanField(default=False, help_text="90-day readmission")
+    readmission_reason = models.TextField(blank=True)
+    
+    # Mortality
+    mortality_30d = models.BooleanField(default=False)
+    mortality_90d = models.BooleanField(default=False)
+    mortality_in_hospital = models.BooleanField(default=False)
+    date_of_death_if_known = models.DateField(null=True, blank=True)
+    
+    # ========================================================================
+    # QUALITY METRICS
+    # ========================================================================
+    
+    operative_report_available = models.BooleanField(default=False)
+    operative_report_link = models.URLField(blank=True, help_text="Link to scanned operative report")
+    
+    # ========================================================================
+    # PROCEDURE SUBTYPES (Existing - keeping as is)
+    # ========================================================================
     
     # Procedure type
     PROCEDURE_TYPES = [
@@ -295,48 +461,12 @@ class SurgicalProcedure(models.Model):
         ('converted', 'Converted (Laparoscopic to Open)'),
     ]
     surgical_approach = models.CharField(max_length=20, choices=APPROACH_CHOICES, default='open')
-
-    # Operative details
-    operative_time_minutes = models.IntegerField(validators=[MinValueValidator(0)])
-    blood_loss_ml = models.IntegerField(validators=[MinValueValidator(0)])
-    intraoperative_transfusion = models.BooleanField(default=False)
-    transfusion_units = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
-    
-    # Pringle maneuver
-    pringle_maneuver = models.BooleanField(default=False)
-    pringle_time_minutes = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
-    pringle_cycles = models.IntegerField(null=True, blank=True, default=None, validators=[MinValueValidator(0)])
-    
-    CLAVIEN_DINDO_CHOICES = [
-        (0, 'No complication'),
-        (1, 'Grade I - Any deviation from normal course'),
-        (2, 'Grade II - Pharmacologic treatment'),
-        (3, 'Grade IIIa - Intervention without general anesthesia'),
-        (4, 'Grade IIIb - Intervention with general anesthesia'),
-        (5, 'Grade IVa - Single organ dysfunction'),
-        (6, 'Grade IVb - Multiorgan dysfunction'),
-        (7, 'Grade V - Death'),
-    ]
-
-    # Complications
-    clavien_dindo_grade = models.IntegerField(choices=CLAVIEN_DINDO_CHOICES, blank=True, null=True)
-    
-    # Postoperative stay
-    hospital_stay_days = models.IntegerField(null=True, blank=True)
-    icu_stay_days = models.IntegerField(null=True, blank=True)
-    
-    # Readmission
-    readmission_30d = models.BooleanField(default=False)
-    readmission_reason = models.TextField(blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['-procedure_date']
     
     def __str__(self):
         return f"{self.get_procedure_type_display()} - {self.patient} - {self.procedure_date}"
-
 class ChemotherapyProtocol(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='chemotherapy')
     start_date = models.DateField()
@@ -383,7 +513,7 @@ class ChemotherapyProtocol(models.Model):
     def __str__(self):
         return f"{self.get_protocol_display()} - {self.patient}"
 
-class FollowUp(models.Model):
+class FollowUp(AuditMixin, models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='followups')
     followup_date = models.DateField()
     
@@ -449,6 +579,14 @@ class FollowUp(models.Model):
     
     def __str__(self):
         return f"Follow-up {self.followup_date} - {self.patient}"
+
+    def clean(self):
+        from .validations import validate_follow_up
+        validate_follow_up(self)
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
     
     @property
     def survival_months(self):
@@ -572,3 +710,5 @@ class TextbookOutcome(models.Model):
     
     def __str__(self):
         return f"Textbook Outcome: {'Achieved' if self.achieved else 'Not Achieved'}"
+
+
